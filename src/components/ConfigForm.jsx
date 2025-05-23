@@ -9,11 +9,19 @@ import {
   AccordionSummary,
   AccordionDetails,
   Alert,
+  InputAdornment,
+  Tooltip,
+  useTheme,
+  useMediaQuery,
 } from '@mui/material';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import SaveIcon from '@mui/icons-material/Save';
+import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
 
 const ConfigForm = () => {
+  const theme = useTheme();
+  const isSmallScreen = useMediaQuery(theme.breakpoints.down('sm'));
+
   const [credentials, setCredentials] = useState({
     facebook: {
       appId: '',
@@ -27,9 +35,13 @@ const ConfigForm = () => {
       handle: '',
       appPassword: '',
     },
+    twitter: {
+      intentUrl: 'https://twitter.com/intent/tweet',
+    },
   });
 
   const [saveStatus, setSaveStatus] = useState({ show: false, message: '', severity: 'success' });
+  const [expanded, setExpanded] = useState(false);
 
   useEffect(() => {
     // Load saved credentials when component mounts
@@ -56,6 +68,10 @@ const ConfigForm = () => {
     }));
   };
 
+  const handleAccordionChange = (panel) => (event, isExpanded) => {
+    setExpanded(isExpanded ? panel : false);
+  };
+
   const handleSave = async () => {
     try {
       await window.electronAPI.storeSet('credentials', credentials);
@@ -74,63 +90,139 @@ const ConfigForm = () => {
   };
 
   return (
-    <Paper elevation={3} sx={{ p: 3 }}>
-      <Typography variant="h5" gutterBottom>
+    <Paper 
+      elevation={3} 
+      sx={{ 
+        p: isSmallScreen ? 2 : 3,
+        width: '100%',
+        maxWidth: '100%',
+        mx: 'auto',
+        boxSizing: 'border-box',
+      }}
+    >
+      <Typography variant="h5" gutterBottom sx={{ mb: 3 }}>
         Platform Configuration
       </Typography>
 
-      <Accordion>
-        <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-          <Typography>Facebook & Instagram</Typography>
-        </AccordionSummary>
-        <AccordionDetails>
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-            <TextField
-              label="App ID"
-              value={credentials.facebook.appId}
-              onChange={(e) => handleChange('facebook', 'appId', e.target.value)}
-              fullWidth
-            />
-            <TextField
-              label="App Secret"
-              type="password"
-              value={credentials.facebook.appSecret}
-              onChange={(e) => handleChange('facebook', 'appSecret', e.target.value)}
-              fullWidth
-            />
-          </Box>
-        </AccordionDetails>
-      </Accordion>
+      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+        <Accordion 
+          expanded={expanded === 'facebook'} 
+          onChange={handleAccordionChange('facebook')}
+        >
+          <AccordionSummary 
+            expandIcon={<ExpandMoreIcon />}
+            sx={{ 
+              minHeight: 48,
+              '& .MuiAccordionSummary-content': {
+                margin: '12px 0',
+              }
+            }}
+          >
+            <Typography>Facebook & Instagram</Typography>
+          </AccordionSummary>
+          <AccordionDetails>
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+              <TextField
+                label="App ID"
+                value={credentials.facebook.appId}
+                onChange={(e) => handleChange('facebook', 'appId', e.target.value)}
+                fullWidth
+                size={isSmallScreen ? "small" : "medium"}
+              />
+              <TextField
+                label="App Secret"
+                type="password"
+                value={credentials.facebook.appSecret}
+                onChange={(e) => handleChange('facebook', 'appSecret', e.target.value)}
+                fullWidth
+                size={isSmallScreen ? "small" : "medium"}
+              />
+            </Box>
+          </AccordionDetails>
+        </Accordion>
 
-      <Accordion>
-        <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-          <Typography>Bluesky</Typography>
-        </AccordionSummary>
-        <AccordionDetails>
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-            <TextField
-              label="Handle"
-              value={credentials.bluesky.handle}
-              onChange={(e) => handleChange('bluesky', 'handle', e.target.value)}
-              fullWidth
-            />
-            <TextField
-              label="App Password"
-              type="password"
-              value={credentials.bluesky.appPassword}
-              onChange={(e) => handleChange('bluesky', 'appPassword', e.target.value)}
-              fullWidth
-            />
-          </Box>
-        </AccordionDetails>
-      </Accordion>
+        <Accordion 
+          expanded={expanded === 'bluesky'} 
+          onChange={handleAccordionChange('bluesky')}
+        >
+          <AccordionSummary 
+            expandIcon={<ExpandMoreIcon />}
+            sx={{ 
+              minHeight: 48,
+              '& .MuiAccordionSummary-content': {
+                margin: '12px 0',
+              }
+            }}
+          >
+            <Typography>Bluesky</Typography>
+          </AccordionSummary>
+          <AccordionDetails>
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+              <TextField
+                label="Handle"
+                value={credentials.bluesky.handle}
+                onChange={(e) => handleChange('bluesky', 'handle', e.target.value)}
+                fullWidth
+                size={isSmallScreen ? "small" : "medium"}
+              />
+              <TextField
+                label="App Password"
+                type="password"
+                value={credentials.bluesky.appPassword}
+                onChange={(e) => handleChange('bluesky', 'appPassword', e.target.value)}
+                fullWidth
+                size={isSmallScreen ? "small" : "medium"}
+              />
+            </Box>
+          </AccordionDetails>
+        </Accordion>
 
-      <Box sx={{ mt: 3 }}>
+        <Accordion 
+          expanded={expanded === 'twitter'} 
+          onChange={handleAccordionChange('twitter')}
+        >
+          <AccordionSummary 
+            expandIcon={<ExpandMoreIcon />}
+            sx={{ 
+              minHeight: 48,
+              '& .MuiAccordionSummary-content': {
+                margin: '12px 0',
+              }
+            }}
+          >
+            <Typography>X (Twitter)</Typography>
+          </AccordionSummary>
+          <AccordionDetails>
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+              <TextField
+                label="Intent URL"
+                value={credentials.twitter.intentUrl}
+                onChange={(e) => handleChange('twitter', 'intentUrl', e.target.value)}
+                fullWidth
+                size={isSmallScreen ? "small" : "medium"}
+                helperText="Customize the Twitter intent URL (e.g., add default hashtags)"
+                InputProps={{
+                  endAdornment: (
+                    <InputAdornment position="end">
+                      <Tooltip title="This URL will be used to open Twitter's web interface with your post pre-filled. You can customize it with default hashtags or other parameters.">
+                        <HelpOutlineIcon color="action" />
+                      </Tooltip>
+                    </InputAdornment>
+                  ),
+                }}
+              />
+            </Box>
+          </AccordionDetails>
+        </Accordion>
+      </Box>
+
+      <Box sx={{ mt: 3, display: 'flex', justifyContent: 'flex-start' }}>
         <Button
           variant="contained"
           color="primary"
           onClick={handleSave}
           startIcon={<SaveIcon />}
+          size={isSmallScreen ? "small" : "medium"}
         >
           Save Credentials
         </Button>

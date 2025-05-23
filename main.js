@@ -10,6 +10,8 @@ if (require('electron-squirrel-startup')) {
 
 let mainWindow;
 
+const isDev = process.env.NODE_ENV === 'development';
+
 const createWindow = () => {
   // Create the browser window.
   mainWindow = new BrowserWindow({
@@ -23,14 +25,19 @@ const createWindow = () => {
   });
 
   // Load the index.html file.
-  if (MAIN_WINDOW_VITE_DEV_SERVER_URL) {
-    mainWindow.loadURL(MAIN_WINDOW_VITE_DEV_SERVER_URL);
-  } else {
-    mainWindow.loadFile(path.join(__dirname, `../renderer/${MAIN_WINDOW_VITE_NAME}/index.html`));
+  try {
+    if (isDev && process.env.MAIN_WINDOW_VITE_DEV_SERVER_URL) {
+      mainWindow.loadURL(process.env.MAIN_WINDOW_VITE_DEV_SERVER_URL);
+    } else {
+      // In production, load from the dist directory
+      mainWindow.loadFile(path.join(__dirname, 'dist', 'index.html'));
+    }
+  } catch (error) {
+    console.error('Error loading window:', error);
   }
 
   // Open the DevTools in development.
-  if (MAIN_WINDOW_VITE_DEV_SERVER_URL) {
+  if (isDev) {
     mainWindow.webContents.openDevTools();
   }
 };
@@ -77,8 +84,26 @@ ipcMain.handle('post:social', async (event, { text, platforms }) => {
     }
 
     if (platforms.twitter) {
-      // Open Twitter intent URL in default browser
-      const tweetUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`;
+      // Get the custom intent URL from credentials, or use default
+      const credentials = store.get('credentials') || {};
+      const intentBaseUrl = credentials.twitter?.intentUrl || 'https://twitter.com/intent/tweet';
+      
+      // Build the URL with proper parameter handling
+      const urlParams = new URLSearchParams();
+      
+      // Add the text parameter
+      urlParams.append('text', text);
+      
+      // If there are custom hashtags in the base URL, extract and add them
+      const baseUrlObj = new URL(intentBaseUrl);
+      const hashtags = baseUrlObj.searchParams.get('hashtags');
+      if (hashtags) {
+        urlParams.append('hashtags', hashtags);
+      }
+      
+      // Construct the final URL
+      const tweetUrl = `https://twitter.com/intent/tweet?${urlParams.toString()}`;
+      
       require('electron').shell.openExternal(tweetUrl);
       results.twitter = { success: true };
     }

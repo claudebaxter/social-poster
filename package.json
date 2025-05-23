@@ -10,7 +10,23 @@
     "start": "electron-forge start",
     "make": "electron-forge make",
     "package": "electron-forge package",
-    "publish": "electron-forge publish"
+    "publish": "electron-forge publish",
+    "dist": "electron-builder",
+    "dist:win": "electron-builder --win --config.win.signAndEditExecutable=false"
+  },
+  "build": {
+    "appId": "com.socialposter.app",
+    "productName": "Social Poster",
+    "directories": {
+      "output": "dist-electron"
+    },
+    "win": {
+      "target": [
+        "nsis",
+        "portable"
+      ],
+      "signAndEditExecutable": false
+    }
   },
   "author": "",
   "license": "MIT",
@@ -35,6 +51,7 @@
     "@electron-forge/plugin-vite": "^7.2.0",
     "@vitejs/plugin-react": "^4.2.1",
     "electron": "^28.2.0",
+    "electron-builder": "^24.9.1",
     "vite": "^5.0.12",
     "vite-plugin-electron": "^0.29.0",
     "vite-plugin-electron-renderer": "^0.14.6"

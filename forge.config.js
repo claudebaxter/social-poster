@@ -1,16 +1,9 @@
 module.exports = {
   packagerConfig: {
     asar: true,
-    icon: './src/assets/icon.ico',
     name: 'Social Poster',
     executableName: 'social-poster',
-    win32metadata: {
-      CompanyName: 'Social Poster',
-      FileDescription: 'Social Media Post Manager',
-      OriginalFilename: 'social-poster.exe',
-      ProductName: 'Social Poster',
-      InternalName: 'social-poster',
-    },
+    out: 'release-builds',
   },
   rebuildConfig: {},
   makers: [
@@ -18,10 +11,7 @@ module.exports = {
       name: '@electron-forge/maker-squirrel',
       config: {
         name: 'social-poster',
-        authors: 'Your Name',
-        exe: 'social-poster.exe',
         setupExe: 'Social-Poster-Setup.exe',
-        setupIcon: './src/assets/icon.ico',
       },
     },
     {

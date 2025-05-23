@@ -15,16 +15,26 @@ import {
   ListItemText,
   ListItemButton,
   Divider,
+  IconButton,
+  useTheme,
+  useMediaQuery,
+  AppBar,
+  Toolbar,
 } from '@mui/material';
 import SendIcon from '@mui/icons-material/Send';
 import SettingsIcon from '@mui/icons-material/Settings';
 import PostAddIcon from '@mui/icons-material/PostAdd';
+import MenuIcon from '@mui/icons-material/Menu';
 import PlatformSelector from './components/PlatformSelector';
 import ConfigForm from './components/ConfigForm';
 
-const DRAWER_WIDTH = 240;
+const DRAWER_WIDTH = 200;
 
 function App() {
+  const theme = useTheme();
+  const isSmallScreen = useMediaQuery(theme.breakpoints.down('sm'));
+  const [mobileOpen, setMobileOpen] = useState(false);
+
   const [text, setText] = useState('');
   const [platforms, setPlatforms] = useState({
     facebook: false,
@@ -33,7 +43,11 @@ function App() {
     twitter: false,
   });
   const [notification, setNotification] = useState({ open: false, message: '', severity: 'info' });
-  const [currentView, setCurrentView] = useState('post'); // 'post' or 'config'
+  const [currentView, setCurrentView] = useState('post');
+
+  const handleDrawerToggle = () => {
+    setMobileOpen(!mobileOpen);
+  };
 
   const handlePost = async () => {
     if (!text.trim()) {
@@ -57,7 +71,6 @@ function App() {
     try {
       const results = await window.electronAPI.postContent({ text, platforms });
       
-      // Check for any errors in the results
       const errors = Object.entries(results)
         .filter(([_, result]) => result.error)
         .map(([platform, result]) => `${platform}: ${result.error}`);
@@ -74,7 +87,7 @@ function App() {
           message: 'Posted successfully!',
           severity: 'success',
         });
-        setText(''); // Clear the text field after successful post
+        setText('');
       }
     } catch (error) {
       setNotification({
@@ -91,8 +104,22 @@ function App() {
     }
 
     return (
-      <Paper elevation={3} sx={{ p: 3 }}>
-        <Typography variant="h4" component="h1" gutterBottom>
+      <Paper 
+        elevation={3} 
+        sx={{ 
+          p: isSmallScreen ? 2 : 3,
+          width: '100%',
+          maxWidth: '100%',
+          mx: 'auto',
+          boxSizing: 'border-box',
+        }}
+      >
+        <Typography 
+          variant={isSmallScreen ? "h5" : "h4"} 
+          component="h1" 
+          gutterBottom
+          sx={{ mb: 3 }}
+        >
           Social Poster
         </Typography>
         
@@ -105,6 +132,7 @@ function App() {
             onChange={(e) => setText(e.target.value)}
             placeholder="Write your post..."
             variant="outlined"
+            size={isSmallScreen ? "small" : "medium"}
           />
         </Box>
 
@@ -121,6 +149,7 @@ function App() {
           onClick={handlePost}
           endIcon={<SendIcon />}
           disabled={!text.trim() || !Object.values(platforms).some(Boolean)}
+          size={isSmallScreen ? "small" : "medium"}
         >
           Post
         </Button>
@@ -128,52 +157,116 @@ function App() {
     );
   };
 
+  const drawer = (
+    <Box>
+      <List>
+        <ListItem disablePadding>
+          <ListItemButton
+            selected={currentView === 'post'}
+            onClick={() => {
+              setCurrentView('post');
+              if (isSmallScreen) setMobileOpen(false);
+            }}
+          >
+            <ListItemIcon>
+              <PostAddIcon />
+            </ListItemIcon>
+            <ListItemText primary="Post" />
+          </ListItemButton>
+        </ListItem>
+        <Divider />
+        <ListItem disablePadding>
+          <ListItemButton
+            selected={currentView === 'config'}
+            onClick={() => {
+              setCurrentView('config');
+              if (isSmallScreen) setMobileOpen(false);
+            }}
+          >
+            <ListItemIcon>
+              <SettingsIcon />
+            </ListItemIcon>
+            <ListItemText primary="Config" />
+          </ListItemButton>
+        </ListItem>
+      </List>
+    </Box>
+  );
+
   return (
-    <Box sx={{ display: 'flex' }}>
+    <Box sx={{ display: 'flex', minHeight: '100vh' }}>
+      <AppBar 
+        position="fixed" 
+        sx={{ 
+          width: isSmallScreen ? '100%' : `calc(100% - ${DRAWER_WIDTH}px)`,
+          ml: isSmallScreen ? 0 : `${DRAWER_WIDTH}px`,
+          bgcolor: 'background.paper',
+          boxShadow: 'none',
+          borderBottom: '1px solid',
+          borderColor: 'divider',
+        }}
+      >
+        <Toolbar>
+          <Typography 
+            variant="h6" 
+            component="div" 
+            sx={{ 
+              flexGrow: 1,
+              color: 'text.primary',
+              display: { xs: 'none', sm: 'block' }
+            }}
+          >
+            {currentView === 'post' ? 'Create Post' : 'Settings'}
+          </Typography>
+          {isSmallScreen && (
+            <IconButton
+              color="inherit"
+              aria-label="open drawer"
+              edge="end"
+              onClick={handleDrawerToggle}
+              sx={{ color: 'text.primary' }}
+            >
+              <MenuIcon />
+            </IconButton>
+          )}
+        </Toolbar>
+      </AppBar>
+
       <Drawer
-        variant="permanent"
-        anchor="right"
+        variant={isSmallScreen ? "temporary" : "permanent"}
+        anchor={isSmallScreen ? "right" : "left"}
+        open={isSmallScreen ? mobileOpen : true}
+        onClose={handleDrawerToggle}
         sx={{
           width: DRAWER_WIDTH,
           flexShrink: 0,
           '& .MuiDrawer-paper': {
             width: DRAWER_WIDTH,
             boxSizing: 'border-box',
+            borderRight: isSmallScreen ? 'none' : '1px solid',
+            borderColor: 'divider',
           },
         }}
+        ModalProps={{
+          keepMounted: true,
+        }}
       >
-        <Box sx={{ overflow: 'auto', mt: 8 }}>
-          <List>
-            <ListItem disablePadding>
-              <ListItemButton
-                selected={currentView === 'post'}
-                onClick={() => setCurrentView('post')}
-              >
-                <ListItemIcon>
-                  <PostAddIcon />
-                </ListItemIcon>
-                <ListItemText primary="Post" />
-              </ListItemButton>
-            </ListItem>
-            <Divider />
-            <ListItem disablePadding>
-              <ListItemButton
-                selected={currentView === 'config'}
-                onClick={() => setCurrentView('config')}
-              >
-                <ListItemIcon>
-                  <SettingsIcon />
-                </ListItemIcon>
-                <ListItemText primary="Config" />
-              </ListItemButton>
-            </ListItem>
-          </List>
-        </Box>
+        {drawer}
       </Drawer>
 
-      <Container maxWidth="md" sx={{ py: 4, pr: `${DRAWER_WIDTH + 24}px` }}>
+      <Box
+        component="main"
+        sx={{
+          flexGrow: 1,
+          p: isSmallScreen ? 2 : 3,
+          width: '100%',
+          mt: '64px', // Height of AppBar
+          boxSizing: 'border-box',
+          overflow: 'auto',
+        }}
+      >
         {renderContent()}
-      </Container>
+      </Box>
 
       <Snackbar
         open={notification.open}
