@@ -75,6 +75,15 @@ function App() {
         .filter(([_, result]) => result.error)
         .map(([platform, result]) => `${platform}: ${result.error}`);
 
+      const successes = Object.entries(results)
+        .filter(([_, result]) => result.success)
+        .map(([platform, result]) => {
+          if (result.debug) {
+            return `${platform}: ${result.debug}`;
+          }
+          return `${platform}: Success`;
+        });
+
       if (errors.length > 0) {
         setNotification({
           open: true,
@@ -82,9 +91,10 @@ function App() {
           severity: 'error',
         });
       } else {
+        const successMessage = successes.length > 0 ? successes.join(', ') : 'Posted successfully!';
         setNotification({
           open: true,
-          message: 'Posted successfully!',
+          message: successMessage,
           severity: 'success',
         });
         setText('');

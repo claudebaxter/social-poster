@@ -1,6 +1,6 @@
 {
   "name": "social-poster",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Cross-platform desktop app for posting to multiple social media platforms",
   "main": "main.js",
   "scripts": {

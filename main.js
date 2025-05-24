@@ -75,12 +75,70 @@ ipcMain.handle('post:social', async (event, { text, platforms }) => {
     }
 
     if (platforms.bluesky) {
-      // Bluesky posting logic will go here
-      const credentials = store.get('bluesky.credentials');
-      if (!credentials) {
-        results.bluesky = { error: 'Not authenticated' };
+      let credentials;
+      try {
+        console.log('=== BLUESKY POSTING ATTEMPT ===');
+        credentials = store.get('credentials');
+        console.log('Retrieved credentials:', JSON.stringify(credentials, null, 2));
+        console.log('Bluesky credentials:', credentials?.bluesky);
+        
+        if (!credentials?.bluesky?.handle || !credentials?.bluesky?.appPassword) {
+          console.log('❌ Bluesky authentication failed: Missing credentials');
+          results.bluesky = { error: 'Not authenticated' };
+        } else {
+          console.log('✅ Bluesky credentials found');
+          console.log('Handle:', credentials.bluesky.handle);
+          console.log('Password length:', credentials.bluesky.appPassword.length);
+          
+          // Clean the handle - remove unicode characters, @ symbols, and whitespace
+          let cleanHandle = credentials.bluesky.handle
+            .replace(/[\u200B-\u200D\uFEFF\u202A-\u202E]/g, '') // Remove zero-width and formatting characters
+            .replace(/^@+/, '') // Remove @ symbols from beginning
+            .trim(); // Remove whitespace
+          
+          console.log('Original handle:', JSON.stringify(credentials.bluesky.handle));
+          console.log('Cleaned handle:', JSON.stringify(cleanHandle));
+          console.log('Attempting Bluesky login with handle:', cleanHandle);
+          
+          // Import and use the Bluesky API
+          const { BskyAgent } = require('@atproto/api');
+          
+          const agent = new BskyAgent({
+            service: 'https://bsky.social',
+          });
+          
+          console.log('🔐 Attempting login...');
+          const loginResult = await agent.login({
+            identifier: cleanHandle,
+            password: credentials.bluesky.appPassword,
+          });
+          console.log('✅ Login successful!');
+          console.log('Login response:', JSON.stringify(loginResult, null, 2));
+          console.log('Agent session:', agent.session);
+          
+          console.log('📝 Attempting to post...');
+          console.log('Post text:', text);
+          const response = await agent.post({
+            text: text,
+          });
+          console.log('✅ Post successful!');
+          console.log('Post response:', JSON.stringify(response, null, 2));
+          console.log('Post URI:', response.uri);
+          console.log('Post CID:', response.cid);
+          
+          results.bluesky = { success: true, uri: response.uri, debug: `Posted! URI: ${response.uri}, CID: ${response.cid}` };
+        }
+      } catch (error) {
+        console.error('❌ Bluesky posting error:', error);
+        console.error('Error details:', {
+          name: error.name,
+          message: error.message,
+          stack: error.stack,
+          cause: error.cause
+        });
+        const debugInfo = `Handle: ${credentials?.bluesky?.handle || 'undefined'}, Password length: ${credentials?.bluesky?.appPassword?.length || 0}`;
+        results.bluesky = { error: `${error.message} (Debug: ${debugInfo})` };
       }
-      // TODO: Implement Bluesky posting
     }
 
     if (platforms.twitter) {

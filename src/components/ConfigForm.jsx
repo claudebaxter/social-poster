@@ -74,13 +74,28 @@ const ConfigForm = () => {
 
   const handleSave = async () => {
     try {
+      console.log('=== SAVING CREDENTIALS ===');
+      console.log('Full credentials object:', credentials);
+      console.log('Bluesky handle:', credentials.bluesky.handle);
+      console.log('Bluesky app password length:', credentials.bluesky.appPassword.length);
+      console.log('Bluesky app password (first 4 chars):', credentials.bluesky.appPassword.substring(0, 4) + '...');
+      
       await window.electronAPI.storeSet('credentials', credentials);
+      
+      // Verify what was actually saved
+      const savedCreds = await window.electronAPI.storeGet('credentials');
+      console.log('=== VERIFICATION: Retrieved after save ===');
+      console.log('Retrieved credentials:', savedCreds);
+      console.log('Retrieved Bluesky handle:', savedCreds?.bluesky?.handle);
+      console.log('Retrieved Bluesky password length:', savedCreds?.bluesky?.appPassword?.length);
+      
       setSaveStatus({
         show: true,
         message: 'Credentials saved successfully!',
         severity: 'success',
       });
     } catch (error) {
+      console.error('Error saving credentials:', error);
       setSaveStatus({
         show: true,
         message: 'Error saving credentials: ' + error.message,
