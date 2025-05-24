@@ -81,6 +81,15 @@ npm run make
 - No data is sent to external servers except the official platform APIs
 - Credentials are stored securely using electron-store
 
-## License
+## License Agreement
 
-MIT 
+This software is the proprietary property of [Your Name or Company].
+
+By purchasing and downloading the application, you are granted a non-transferable, non-exclusive license to install and use the software for personal or commercial use. 
+
+You may not:
+- Redistribute or resell the application
+- Reverse engineer, modify, or decompile the source code
+- Use the application in any illegal or unauthorized way
+
+All rights reserved. For licensing inquiries or commercial use, contact: [you@example.com]
