@@ -7,4 +7,12 @@ contextBridge.exposeInMainWorld('electronAPI', {
   
   // Social media posting
   postContent: ({ text, platforms }) => ipcRenderer.invoke('post:social', { text, platforms }),
+  
+  // OAuth operations
+  openExternal: (url) => ipcRenderer.invoke('open-external', url),
+  exchangeMetaCode: (code) => ipcRenderer.invoke('exchange-meta-code', code),
+  
+  // OAuth callback listener
+  onMetaOAuthCallback: (callback) => ipcRenderer.on('meta-oauth-callback', callback),
+  removeMetaOAuthListener: (callback) => ipcRenderer.removeListener('meta-oauth-callback', callback),
 }); 

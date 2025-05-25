@@ -65,3 +65,17 @@ release/
 
 # Cursor-specific
 .cursor/ 
+
+# Firebase backend
+/firebase/functions/node_modules
+/firebase/.firebase
+
+# Vercel
+.vercel
+.env*.local
+.env
+
+# Environment variables
+.env
+.env.*
+!.env.example

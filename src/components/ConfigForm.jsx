@@ -13,10 +13,13 @@ import {
   Tooltip,
   useTheme,
   useMediaQuery,
+  Chip,
 } from '@mui/material';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import SaveIcon from '@mui/icons-material/Save';
 import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
+import FacebookIcon from '@mui/icons-material/Facebook';
+import LogoutIcon from '@mui/icons-material/Logout';
 
 const ConfigForm = () => {
   const theme = useTheme();
@@ -24,12 +27,14 @@ const ConfigForm = () => {
 
   const [credentials, setCredentials] = useState({
     facebook: {
-      appId: '',
-      appSecret: '',
+      accessToken: '',
+      userInfo: null,
+      pages: [],
     },
     instagram: {
-      appId: '',
-      appSecret: '',
+      accessToken: '',
+      userInfo: null,
+      pages: [],
     },
     bluesky: {
       handle: '',
@@ -42,6 +47,7 @@ const ConfigForm = () => {
 
   const [saveStatus, setSaveStatus] = useState({ show: false, message: '', severity: 'success' });
   const [expanded, setExpanded] = useState(false);
+  const [metaAuthLoading, setMetaAuthLoading] = useState(false);
 
   useEffect(() => {
     // Load saved credentials when component mounts
@@ -56,6 +62,56 @@ const ConfigForm = () => {
       }
     };
     loadCredentials();
+
+    // Listen for OAuth callback
+    const handleOAuthCallback = async (event, { code }) => {
+      try {
+        setMetaAuthLoading(true);
+        
+        const result = await window.electronAPI.exchangeMetaCode(code);
+        
+        if (result.success) {
+          // Update credentials with the new OAuth data
+          setCredentials(prev => ({
+            ...prev,
+            facebook: {
+              accessToken: prev.facebook.accessToken,
+              userInfo: result.user,
+              pages: result.pages,
+            },
+            instagram: {
+              accessToken: prev.instagram.accessToken,
+              userInfo: result.user,
+              pages: result.pages,
+            },
+          }));
+          
+          setSaveStatus({
+            show: true,
+            message: `Successfully logged in as ${result.user.name}!`,
+            severity: 'success',
+          });
+        } else {
+          throw new Error(result.error || 'OAuth exchange failed');
+        }
+      } catch (error) {
+        console.error('Error handling OAuth callback:', error);
+        setSaveStatus({
+          show: true,
+          message: 'OAuth login failed: ' + error.message,
+          severity: 'error',
+        });
+      } finally {
+        setMetaAuthLoading(false);
+      }
+    };
+
+    window.electronAPI.onMetaOAuthCallback(handleOAuthCallback);
+
+    // Cleanup
+    return () => {
+      window.electronAPI.removeMetaOAuthListener(handleOAuthCallback);
+    };
   }, []);
 
   const handleChange = (platform, field, value) => {
@@ -70,6 +126,66 @@ const ConfigForm = () => {
 
   const handleAccordionChange = (panel) => (event, isExpanded) => {
     setExpanded(isExpanded ? panel : false);
+  };
+
+  const handleMetaLogin = async () => {
+    try {
+      setMetaAuthLoading(true);
+      
+      // Get OAuth URL from Vercel API
+      const response = await fetch('/api/meta-oauth-url');
+      const data = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to get OAuth URL');
+      }
+
+      // Open OAuth URL in external browser
+      await window.electronAPI.openExternal(data.oauthUrl);
+      
+      // Show message to user
+      setSaveStatus({
+        show: true,
+        message: 'OAuth window opened in browser. Please complete authentication and return here.',
+        severity: 'info',
+      });
+
+    } catch (error) {
+      console.error('Error initiating Meta OAuth:', error);
+      setSaveStatus({
+        show: true,
+        message: 'Error initiating OAuth: ' + error.message,
+        severity: 'error',
+      });
+    } finally {
+      setMetaAuthLoading(false);
+    }
+  };
+
+  const handleMetaLogout = async () => {
+    try {
+      setCredentials(prev => ({
+        ...prev,
+        facebook: {
+          accessToken: '',
+          userInfo: null,
+          pages: [],
+        },
+        instagram: {
+          accessToken: '',
+          userInfo: null,
+          pages: [],
+        },
+      }));
+      
+      setSaveStatus({
+        show: true,
+        message: 'Logged out of Meta accounts successfully!',
+        severity: 'success',
+      });
+    } catch (error) {
+      console.error('Error logging out:', error);
+    }
   };
 
   const handleSave = async () => {
@@ -104,6 +220,8 @@ const ConfigForm = () => {
     }
   };
 
+  const isMetaConnected = credentials.facebook.accessToken && credentials.facebook.userInfo;
+
   return (
     <Paper 
       elevation={3} 
@@ -137,21 +255,61 @@ const ConfigForm = () => {
           </AccordionSummary>
           <AccordionDetails>
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-              <TextField
-                label="App ID"
-                value={credentials.facebook.appId}
-                onChange={(e) => handleChange('facebook', 'appId', e.target.value)}
-                fullWidth
-                size={isSmallScreen ? "small" : "medium"}
-              />
-              <TextField
-                label="App Secret"
-                type="password"
-                value={credentials.facebook.appSecret}
-                onChange={(e) => handleChange('facebook', 'appSecret', e.target.value)}
-                fullWidth
-                size={isSmallScreen ? "small" : "medium"}
-              />
+              {isMetaConnected ? (
+                <>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <Chip 
+                      label={`Connected as ${credentials.facebook.userInfo.name}`}
+                      color="success"
+                      variant="outlined"
+                    />
+                  </Box>
+                  
+                  {credentials.facebook.pages.length > 0 && (
+                    <Box>
+                      <Typography variant="subtitle2" gutterBottom>
+                        Available Pages:
+                      </Typography>
+                      {credentials.facebook.pages.map((page) => (
+                        <Chip 
+                          key={page.id}
+                          label={page.name}
+                          size="small"
+                          sx={{ mr: 1, mb: 1 }}
+                        />
+                      ))}
+                    </Box>
+                  )}
+                  
+                  <Button
+                    variant="outlined"
+                    color="error"
+                    onClick={handleMetaLogout}
+                    startIcon={<LogoutIcon />}
+                    size={isSmallScreen ? "small" : "medium"}
+                  >
+                    Disconnect Meta Account
+                  </Button>
+                </>
+              ) : (
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                  <Typography variant="body2" color="text.secondary">
+                    Connect your Meta account to post to Facebook and Instagram. 
+                    This will use secure OAuth authentication.
+                  </Typography>
+                  
+                  <Button
+                    variant="contained"
+                    color="primary"
+                    onClick={handleMetaLogin}
+                    startIcon={<FacebookIcon />}
+                    disabled={metaAuthLoading}
+                    size={isSmallScreen ? "small" : "medium"}
+                  >
+                    {metaAuthLoading ? 'Opening OAuth...' : 'Login with Meta'}
+                  </Button>
+                </Box>
+              )}
             </Box>
           </AccordionDetails>
         </Accordion>

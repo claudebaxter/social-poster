@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain } = require('electron');
+const { app, BrowserWindow, ipcMain, shell } = require('electron');
 const path = require('path');
 const Store = require('electron-store');
 const store = new Store();
@@ -52,26 +52,127 @@ ipcMain.handle('store:set', (event, { key, value }) => {
   return true;
 });
 
+// Handle opening external URLs
+ipcMain.handle('open-external', async (event, url) => {
+  try {
+    await shell.openExternal(url);
+    return { success: true };
+  } catch (error) {
+    console.error('Error opening external URL:', error);
+    return { error: error.message };
+  }
+});
+
+// Handle Meta OAuth code exchange
+ipcMain.handle('exchange-meta-code', async (event, code) => {
+  try {
+    // Call Vercel API to exchange code for token
+    const response = await fetch('https://your-vercel-domain.vercel.app/api/exchange-meta-code', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ code }),
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.error || 'Failed to exchange code for token');
+    }
+
+    // Store the access token and user info
+    const credentials = store.get('credentials') || {};
+    credentials.facebook = {
+      accessToken: data.accessToken,
+      userInfo: data.user,
+      pages: data.pages,
+    };
+    credentials.instagram = {
+      accessToken: data.accessToken,
+      userInfo: data.user,
+      pages: data.pages,
+    };
+    
+    store.set('credentials', credentials);
+
+    return { success: true, user: data.user, pages: data.pages };
+  } catch (error) {
+    console.error('Error exchanging Meta code:', error);
+    return { error: error.message };
+  }
+});
+
 ipcMain.handle('post:social', async (event, { text, platforms }) => {
   const results = {};
   
   try {
     if (platforms.facebook) {
-      // Facebook posting logic will go here
-      const token = store.get('facebook.token');
-      if (!token) {
-        results.facebook = { error: 'Not authenticated' };
+      try {
+        const credentials = store.get('credentials');
+        const accessToken = credentials?.facebook?.accessToken;
+        
+        if (!accessToken) {
+          results.facebook = { error: 'Not authenticated' };
+        } else {
+          // Call Vercel API to post to Facebook
+          const response = await fetch('https://your-vercel-domain.vercel.app/api/post-to-facebook', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              text,
+              accessToken,
+            }),
+          });
+
+          const data = await response.json();
+
+          if (!response.ok) {
+            throw new Error(data.error || 'Failed to post to Facebook');
+          }
+
+          results.facebook = { success: true, postId: data.postId };
+        }
+      } catch (error) {
+        console.error('Facebook posting error:', error);
+        results.facebook = { error: error.message };
       }
-      // TODO: Implement Facebook posting
     }
 
     if (platforms.instagram) {
-      // Instagram posting logic will go here
-      const token = store.get('instagram.token');
-      if (!token) {
-        results.instagram = { error: 'Not authenticated' };
+      try {
+        const credentials = store.get('credentials');
+        const accessToken = credentials?.instagram?.accessToken;
+        
+        if (!accessToken) {
+          results.instagram = { error: 'Not authenticated' };
+        } else {
+          // Call Vercel API to post to Instagram
+          const response = await fetch('https://your-vercel-domain.vercel.app/api/post-to-instagram', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              text,
+              accessToken,
+            }),
+          });
+
+          const data = await response.json();
+
+          if (!response.ok) {
+            throw new Error(data.error || 'Failed to post to Instagram');
+          }
+
+          results.instagram = { success: true, postId: data.postId };
+        }
+      } catch (error) {
+        console.error('Instagram posting error:', error);
+        results.instagram = { error: error.message };
       }
-      // TODO: Implement Instagram posting
     }
 
     if (platforms.bluesky) {
@@ -162,7 +263,7 @@ ipcMain.handle('post:social', async (event, { text, platforms }) => {
       // Construct the final URL
       const tweetUrl = `https://twitter.com/intent/tweet?${urlParams.toString()}`;
       
-      require('electron').shell.openExternal(tweetUrl);
+      shell.openExternal(tweetUrl);
       results.twitter = { success: true };
     }
 
@@ -170,6 +271,26 @@ ipcMain.handle('post:social', async (event, { text, platforms }) => {
   } catch (error) {
     console.error('Error posting to social media:', error);
     return { error: error.message };
+  }
+});
+
+// Handle OAuth callback URLs
+app.setAsDefaultProtocolClient('social-poster');
+
+app.on('open-url', (event, url) => {
+  event.preventDefault();
+  
+  // Handle Meta OAuth callback
+  if (url.includes('code=')) {
+    const urlObj = new URL(url);
+    const code = urlObj.searchParams.get('code');
+    
+    if (code) {
+      // Send the code to the renderer process
+      if (mainWindow) {
+        mainWindow.webContents.send('meta-oauth-callback', { code });
+      }
+    }
   }
 });
 
