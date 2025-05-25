@@ -6,7 +6,10 @@ contextBridge.exposeInMainWorld('electronAPI', {
   storeSet: (key, value) => ipcRenderer.invoke('store:set', { key, value }),
   
   // Social media posting
-  postContent: ({ text, platforms }) => ipcRenderer.invoke('post:social', { text, platforms }),
+  postContent: ({ text, platforms, image }) => ipcRenderer.invoke('post:social', { text, platforms, image }),
+  
+  // Image selection
+  selectImage: () => ipcRenderer.invoke('select-image'),
   
   // OAuth operations
   openExternal: (url) => ipcRenderer.invoke('open-external', url),

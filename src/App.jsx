@@ -20,11 +20,21 @@ import {
   useMediaQuery,
   AppBar,
   Toolbar,
+  Chip,
+  Card,
+  CardMedia,
+  CardActions,
+  Tooltip,
 } from '@mui/material';
 import SendIcon from '@mui/icons-material/Send';
 import SettingsIcon from '@mui/icons-material/Settings';
 import PostAddIcon from '@mui/icons-material/PostAdd';
 import MenuIcon from '@mui/icons-material/Menu';
+import AttachFileIcon from '@mui/icons-material/AttachFile';
+import ImageIcon from '@mui/icons-material/Image';
+import DeleteIcon from '@mui/icons-material/Delete';
+import WarningIcon from '@mui/icons-material/Warning';
+import InfoIcon from '@mui/icons-material/Info';
 import PlatformSelector from './components/PlatformSelector';
 import ConfigForm from './components/ConfigForm';
 
@@ -36,6 +46,7 @@ function App() {
   const [mobileOpen, setMobileOpen] = useState(false);
 
   const [text, setText] = useState('');
+  const [attachedImage, setAttachedImage] = useState(null);
   const [platforms, setPlatforms] = useState({
     facebook: false,
     instagram: false,
@@ -49,27 +60,91 @@ function App() {
     setMobileOpen(!mobileOpen);
   };
 
-  const handlePost = async () => {
-    if (!text.trim()) {
+  const handleImageAttach = async () => {
+    try {
+      const result = await window.electronAPI.selectImage();
+      if (result && !result.error) {
+        setAttachedImage(result);
+      } else if (result?.error) {
+        setNotification({
+          open: true,
+          message: result.error,
+          severity: 'error',
+        });
+      }
+    } catch (error) {
       setNotification({
         open: true,
-        message: 'Please enter some text to post',
-        severity: 'warning',
+        message: `Error selecting image: ${error.message}`,
+        severity: 'error',
       });
-      return;
     }
+  };
 
-    if (!Object.values(platforms).some(Boolean)) {
+  const handleImageRemove = () => {
+    setAttachedImage(null);
+  };
+
+  // Helper function to check image size for Bluesky
+  const getImageSizeWarning = () => {
+    if (!attachedImage) return null;
+    
+    const blueskySizeLimit = 976 * 1024; // 976KB
+    if (platforms.bluesky && attachedImage.size > blueskySizeLimit) {
+      const sizeInKB = (attachedImage.size / 1024).toFixed(0);
+      return `Image is ${sizeInKB}KB but Bluesky limit is 976KB. Will attempt compression.`;
+    }
+    return null;
+  };
+
+  // Helper function to check if Twitter/X has image with manual note
+  const getTwitterImageWarning = () => {
+    if (platforms.twitter && attachedImage) {
+      return 'Twitter/X requires manual image attachment in browser';
+    }
+    return null;
+  };
+
+  const isPostButtonDisabled = () => {
+    // Basic validation
+    if (!text.trim() || !Object.values(platforms).some(Boolean)) {
+      return true;
+    }
+    
+    // Instagram requires an image
+    if (platforms.instagram && !attachedImage) {
+      return true;
+    }
+    
+    return false;
+  };
+
+  const getValidationMessage = () => {
+    if (!text.trim()) return 'Please enter some text to post';
+    if (!Object.values(platforms).some(Boolean)) return 'Please select at least one platform';
+    if (platforms.instagram && !attachedImage) return 'Instagram requires an image to be attached';
+    return '';
+  };
+
+  const handlePost = async () => {
+    const validationMessage = getValidationMessage();
+    if (validationMessage) {
       setNotification({
         open: true,
-        message: 'Please select at least one platform',
+        message: validationMessage,
         severity: 'warning',
       });
       return;
     }
 
     try {
-      const results = await window.electronAPI.postContent({ text, platforms });
+      const postData = { 
+        text, 
+        platforms,
+        ...(attachedImage && { image: attachedImage })
+      };
+      
+      const results = await window.electronAPI.postContent(postData);
       
       const errors = Object.entries(results)
         .filter(([_, result]) => result.error)
@@ -98,6 +173,7 @@ function App() {
           severity: 'success',
         });
         setText('');
+        setAttachedImage(null);
       }
     } catch (error) {
       setNotification({
@@ -146,6 +222,87 @@ function App() {
           />
         </Box>
 
+        {/* Image Attachment Section */}
+        <Box sx={{ mb: 3 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
+            <Button
+              variant="outlined"
+              onClick={handleImageAttach}
+              startIcon={<AttachFileIcon />}
+              size={isSmallScreen ? "small" : "medium"}
+            >
+              Attach Image
+            </Button>
+            
+            {platforms.instagram && !attachedImage && (
+              <Chip 
+                icon={<ImageIcon />}
+                label="Instagram requires an image"
+                color="warning"
+                size="small"
+              />
+            )}
+
+            {/* Bluesky image size warning */}
+            {getImageSizeWarning() && (
+              <Tooltip title={getImageSizeWarning()} arrow>
+                <Chip 
+                  icon={<WarningIcon />}
+                  label="Image size warning"
+                  color="warning"
+                  size="small"
+                  variant="outlined"
+                />
+              </Tooltip>
+            )}
+
+            {/* Twitter image manual attachment warning */}
+            {getTwitterImageWarning() && (
+              <Tooltip title={getTwitterImageWarning()} arrow>
+                <Chip 
+                  icon={<InfoIcon />}
+                  label="Manual attachment required"
+                  color="info"
+                  size="small"
+                  variant="outlined"
+                />
+              </Tooltip>
+            )}
+          </Box>
+          
+          {attachedImage && (
+            <Card sx={{ maxWidth: 400, mb: 2 }}>
+              <CardMedia
+                component="img"
+                height="200"
+                image={attachedImage.dataUrl}
+                alt="Attached image"
+                sx={{ objectFit: 'cover' }}
+              />
+              <CardActions>
+                <Chip 
+                  label={attachedImage.name}
+                  size="small"
+                  sx={{ maxWidth: 250 }}
+                />
+                <Chip 
+                  label={`${(attachedImage.size / 1024).toFixed(0)}KB`}
+                  size="small"
+                  variant="outlined"
+                />
+                <Box sx={{ flexGrow: 1 }} />
+                <IconButton 
+                  onClick={handleImageRemove}
+                  color="error"
+                  size="small"
+                >
+                  <DeleteIcon />
+                </IconButton>
+              </CardActions>
+            </Card>
+          )}
+        </Box>
+
         <Box sx={{ mb: 3 }}>
           <Typography variant="h6" gutterBottom>
             Select Platforms
@@ -158,11 +315,21 @@ function App() {
           color="primary"
           onClick={handlePost}
           endIcon={<SendIcon />}
-          disabled={!text.trim() || !Object.values(platforms).some(Boolean)}
+          disabled={isPostButtonDisabled()}
           size={isSmallScreen ? "small" : "medium"}
         >
           Post
         </Button>
+        
+        {getValidationMessage() && (
+          <Typography 
+            variant="caption" 
+            color="text.secondary" 
+            sx={{ display: 'block', mt: 1 }}
+          >
+            {getValidationMessage()}
+          </Typography>
+        )}
       </Paper>
     );
   };

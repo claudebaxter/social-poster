@@ -59,6 +59,21 @@ Thumbs.db
 # Electron-specific
 dist-electron/
 release/
+*.exe
+*.dmg
+*.pkg
+*.deb
+*.rpm
+*.snap
+*.AppImage
+
+# Electron user data and config files (contain sensitive credentials)
+config.json
+credentials.json
+*.key
+*.pem
+*.p12
+*.pfx
 
 # Vite
 .vite/
@@ -82,3 +97,46 @@ release/
 
 # Backend repository (separate repo)
 social-poster-backend/
+
+# Legacy API files (moved to backend repo)
+/api/
+
+# Sensitive configuration files
+secrets.json
+private.key
+*.secrets
+*.private
+
+# Test files with potential sensitive data
+test-credentials.json
+test-config.json
+*.test.env
+
+# Backup files that might contain sensitive data
+*.backup
+*.bak
+config.backup.*
+credentials.backup.*
+
+# macOS specific
+.DS_Store
+.AppleDouble
+.LSOverride
+Icon
+
+# Windows specific  
+Thumbs.db
+Thumbs.db:encryptable
+ehthumbs.db
+ehthumbs_vista.db
+*.cab
+*.msi
+*.msix
+*.msm
+*.msp
+*.lnk
+
+# Package manager lock files for security scanning
+# (keeping package-lock.json but ignoring others)
+yarn.lock
+pnpm-lock.yaml

@@ -1,7 +1,0 @@
-node_modules/
-*.local
-
-# Environment variables
-.env
-.env.*
-!.env.example

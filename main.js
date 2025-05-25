@@ -1,5 +1,6 @@
-const { app, BrowserWindow, ipcMain, shell } = require('electron');
+const { app, BrowserWindow, ipcMain, shell, dialog } = require('electron');
 const path = require('path');
+const fs = require('fs');
 const Store = require('electron-store');
 const store = new Store();
 
@@ -67,7 +68,7 @@ ipcMain.handle('open-external', async (event, url) => {
 ipcMain.handle('exchange-meta-code', async (event, code) => {
   try {
     // Call Vercel API to exchange code for token
-    const response = await fetch('https://your-vercel-domain.vercel.app/api/exchange-meta-code', {
+    const response = await fetch('https://social-poster-backend.vercel.app/api/exchange-meta-code', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -103,7 +104,7 @@ ipcMain.handle('exchange-meta-code', async (event, code) => {
   }
 });
 
-ipcMain.handle('post:social', async (event, { text, platforms }) => {
+ipcMain.handle('post:social', async (event, { text, platforms, image }) => {
   const results = {};
   
   try {
@@ -116,15 +117,18 @@ ipcMain.handle('post:social', async (event, { text, platforms }) => {
           results.facebook = { error: 'Not authenticated' };
         } else {
           // Call Vercel API to post to Facebook
-          const response = await fetch('https://your-vercel-domain.vercel.app/api/post-to-facebook', {
+          const requestBody = {
+            text,
+            accessToken,
+            ...(image && { image: image.base64, imageMimeType: image.mimeType })
+          };
+
+          const response = await fetch('https://social-poster-backend.vercel.app/api/post-to-facebook', {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
             },
-            body: JSON.stringify({
-              text,
-              accessToken,
-            }),
+            body: JSON.stringify(requestBody),
           });
 
           const data = await response.json();
@@ -145,32 +149,65 @@ ipcMain.handle('post:social', async (event, { text, platforms }) => {
       try {
         const credentials = store.get('credentials');
         const accessToken = credentials?.instagram?.accessToken;
+        const pages = credentials?.instagram?.pages;
         
         if (!accessToken) {
           results.instagram = { error: 'Not authenticated' };
+        } else if (!image) {
+          results.instagram = { error: 'Instagram requires an image to be attached' };
         } else {
+          console.log('=== INSTAGRAM POSTING ATTEMPT ===');
+          console.log('Access token length:', accessToken.length);
+          console.log('Text to post:', text);
+          console.log('Image attached:', !!image);
+          console.log('Available pages:', pages?.length || 0);
+          
+          // Find the first page with Instagram account
+          const pageWithInstagram = pages?.find(page => page.instagram_business_account);
+          const pageId = pageWithInstagram?.id;
+          const instagramAccountId = pageWithInstagram?.instagram_business_account?.id;
+          
+          console.log('Selected page ID:', pageId);
+          console.log('Instagram account ID:', instagramAccountId);
+          
           // Call Vercel API to post to Instagram
-          const response = await fetch('https://your-vercel-domain.vercel.app/api/post-to-instagram', {
+          const requestBody = {
+            text,
+            accessToken,
+            image: image.base64,
+            imageMimeType: image.mimeType,
+            ...(pageId && { pageId })
+          };
+          
+          console.log('Request body prepared with image');
+          
+          const response = await fetch('https://social-poster-backend.vercel.app/api/post-to-instagram', {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
             },
-            body: JSON.stringify({
-              text,
-              accessToken,
-            }),
+            body: JSON.stringify(requestBody),
           });
 
           const data = await response.json();
+          console.log('Instagram API Response Status:', response.status);
+          console.log('Instagram API Response Data:', JSON.stringify(data, null, 2));
 
           if (!response.ok) {
+            console.error('❌ Instagram API Error Details:', data);
             throw new Error(data.error || 'Failed to post to Instagram');
           }
 
+          console.log('✅ Instagram post successful!');
           results.instagram = { success: true, postId: data.postId };
         }
       } catch (error) {
         console.error('Instagram posting error:', error);
+        console.error('Full error details:', {
+          name: error.name,
+          message: error.message,
+          stack: error.stack
+        });
         results.instagram = { error: error.message };
       }
     }
@@ -180,8 +217,8 @@ ipcMain.handle('post:social', async (event, { text, platforms }) => {
       try {
         console.log('=== BLUESKY POSTING ATTEMPT ===');
         credentials = store.get('credentials');
-        console.log('Retrieved credentials:', JSON.stringify(credentials, null, 2));
         console.log('Bluesky credentials:', credentials?.bluesky);
+        console.log('Image attached:', !!image);
         
         if (!credentials?.bluesky?.handle || !credentials?.bluesky?.appPassword) {
           console.log('❌ Bluesky authentication failed: Missing credentials');
@@ -189,7 +226,6 @@ ipcMain.handle('post:social', async (event, { text, platforms }) => {
         } else {
           console.log('✅ Bluesky credentials found');
           console.log('Handle:', credentials.bluesky.handle);
-          console.log('Password length:', credentials.bluesky.appPassword.length);
           
           // Clean the handle - remove unicode characters, @ symbols, and whitespace
           let cleanHandle = credentials.bluesky.handle
@@ -197,9 +233,7 @@ ipcMain.handle('post:social', async (event, { text, platforms }) => {
             .replace(/^@+/, '') // Remove @ symbols from beginning
             .trim(); // Remove whitespace
           
-          console.log('Original handle:', JSON.stringify(credentials.bluesky.handle));
           console.log('Cleaned handle:', JSON.stringify(cleanHandle));
-          console.log('Attempting Bluesky login with handle:', cleanHandle);
           
           // Import and use the Bluesky API
           const { BskyAgent } = require('@atproto/api');
@@ -214,35 +248,91 @@ ipcMain.handle('post:social', async (event, { text, platforms }) => {
             password: credentials.bluesky.appPassword,
           });
           console.log('✅ Login successful!');
-          console.log('Login response:', JSON.stringify(loginResult, null, 2));
-          console.log('Agent session:', agent.session);
+          
+          let postData = {
+            text: text,
+          };
+
+          // If image is attached, upload it first
+          if (image) {
+            console.log('📷 Uploading image to Bluesky...');
+            let imageBuffer = Buffer.from(image.base64, 'base64');
+            
+            // Check Bluesky size limit (976.56KB)
+            const blueskySizeLimit = 976 * 1024; // 976KB in bytes
+            console.log(`Image size: ${(imageBuffer.length / 1024).toFixed(2)}KB, Limit: ${(blueskySizeLimit / 1024).toFixed(2)}KB`);
+            
+            if (imageBuffer.length > blueskySizeLimit) {
+              console.log('⚠️ Image too large for Bluesky, attempting compression...');
+              
+              try {
+                // Use sharp library for image compression if available
+                const sharp = require('sharp');
+                
+                let quality = 85; // Start with 85% quality
+                let compressedBuffer;
+                
+                do {
+                  compressedBuffer = await sharp(imageBuffer)
+                    .jpeg({ quality })
+                    .toBuffer();
+                  
+                  console.log(`🔄 Compressed to ${quality}% quality: ${(compressedBuffer.length / 1024).toFixed(2)}KB`);
+                  
+                  if (compressedBuffer.length <= blueskySizeLimit) {
+                    imageBuffer = compressedBuffer;
+                    console.log('✅ Image successfully compressed for Bluesky');
+                    break;
+                  }
+                  
+                  quality -= 10; // Reduce quality by 10%
+                } while (quality > 30 && compressedBuffer.length > blueskySizeLimit);
+                
+                if (compressedBuffer.length > blueskySizeLimit) {
+                  throw new Error(`Image is too large for Bluesky. Maximum size is ${(blueskySizeLimit / 1024).toFixed(0)}KB. Current size: ${(compressedBuffer.length / 1024).toFixed(2)}KB. Please use a smaller image.`);
+                }
+              } catch (compressionError) {
+                if (compressionError.code === 'MODULE_NOT_FOUND') {
+                  // Sharp not available, suggest manual resize
+                  throw new Error(`Image is too large for Bluesky (${(imageBuffer.length / 1024).toFixed(2)}KB > ${(blueskySizeLimit / 1024).toFixed(0)}KB limit). Please resize your image and try again.`);
+                } else {
+                  throw compressionError;
+                }
+              }
+            }
+            
+            const uploadResponse = await agent.uploadBlob(imageBuffer, {
+              encoding: image.mimeType,
+            });
+            
+            console.log('✅ Image uploaded successfully!');
+            
+            // Add image embed to post
+            postData.embed = {
+              $type: 'app.bsky.embed.images',
+              images: [{
+                image: uploadResponse.data.blob,
+                alt: text.substring(0, 100), // Use post text as alt text (truncated)
+              }],
+            };
+          }
           
           console.log('📝 Attempting to post...');
-          console.log('Post text:', text);
-          const response = await agent.post({
-            text: text,
-          });
+          const response = await agent.post(postData);
           console.log('✅ Post successful!');
-          console.log('Post response:', JSON.stringify(response, null, 2));
           console.log('Post URI:', response.uri);
-          console.log('Post CID:', response.cid);
           
-          results.bluesky = { success: true, uri: response.uri, debug: `Posted! URI: ${response.uri}, CID: ${response.cid}` };
+          results.bluesky = { success: true, uri: response.uri };
         }
       } catch (error) {
         console.error('❌ Bluesky posting error:', error);
-        console.error('Error details:', {
-          name: error.name,
-          message: error.message,
-          stack: error.stack,
-          cause: error.cause
-        });
-        const debugInfo = `Handle: ${credentials?.bluesky?.handle || 'undefined'}, Password length: ${credentials?.bluesky?.appPassword?.length || 0}`;
+        const debugInfo = `Handle: ${credentials?.bluesky?.handle || 'undefined'}`;
         results.bluesky = { error: `${error.message} (Debug: ${debugInfo})` };
       }
     }
 
     if (platforms.twitter) {
+      // Note: Twitter intent URLs don't support image attachments
       // Get the custom intent URL from credentials, or use default
       const credentials = store.get('credentials') || {};
       const intentBaseUrl = credentials.twitter?.intentUrl || 'https://twitter.com/intent/tweet';
@@ -264,7 +354,15 @@ ipcMain.handle('post:social', async (event, { text, platforms }) => {
       const tweetUrl = `https://twitter.com/intent/tweet?${urlParams.toString()}`;
       
       shell.openExternal(tweetUrl);
-      results.twitter = { success: true };
+      
+      if (image) {
+        results.twitter = { 
+          success: true, 
+          note: 'Image cannot be automatically attached to Twitter posts. Please attach manually in the browser.' 
+        };
+      } else {
+        results.twitter = { success: true };
+      }
     }
 
     return results;
@@ -273,6 +371,69 @@ ipcMain.handle('post:social', async (event, { text, platforms }) => {
     return { error: error.message };
   }
 });
+
+// Handle image file selection
+ipcMain.handle('select-image', async (event) => {
+  try {
+    const result = await dialog.showOpenDialog(mainWindow, {
+      title: 'Select an image',
+      properties: ['openFile'],
+      filters: [
+        {
+          name: 'Images',
+          extensions: ['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp']
+        }
+      ]
+    });
+
+    if (result.canceled || result.filePaths.length === 0) {
+      return { canceled: true };
+    }
+
+    const filePath = result.filePaths[0];
+    const fileName = path.basename(filePath);
+    const fileStats = fs.statSync(filePath);
+    
+    // Check file size (limit to 10MB)
+    const maxSize = 10 * 1024 * 1024; // 10MB
+    if (fileStats.size > maxSize) {
+      return { 
+        error: 'File size is too large. Please select an image smaller than 10MB.' 
+      };
+    }
+
+    // Read file and convert to base64
+    const fileBuffer = fs.readFileSync(filePath);
+    const base64Data = fileBuffer.toString('base64');
+    const mimeType = getMimeType(path.extname(fileName).toLowerCase());
+    const dataUrl = `data:${mimeType};base64,${base64Data}`;
+
+    return {
+      name: fileName,
+      path: filePath,
+      size: fileStats.size,
+      mimeType: mimeType,
+      base64: base64Data,
+      dataUrl: dataUrl
+    };
+  } catch (error) {
+    console.error('Error selecting image:', error);
+    return { error: error.message };
+  }
+});
+
+// Helper function to get MIME type from file extension
+function getMimeType(extension) {
+  const mimeTypes = {
+    '.jpg': 'image/jpeg',
+    '.jpeg': 'image/jpeg',
+    '.png': 'image/png',
+    '.gif': 'image/gif',
+    '.webp': 'image/webp',
+    '.bmp': 'image/bmp'
+  };
+  return mimeTypes[extension] || 'image/jpeg';
+}
 
 // Handle OAuth callback URLs
 app.setAsDefaultProtocolClient('social-poster');

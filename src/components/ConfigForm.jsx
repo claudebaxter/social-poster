@@ -132,23 +132,83 @@ const ConfigForm = () => {
     try {
       setMetaAuthLoading(true);
       
+      // Generate a unique session ID for this OAuth flow
+      const sessionId = 'session_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+      
       // Get OAuth URL from Vercel API
-      const response = await fetch('/api/meta-oauth-url');
+      const response = await fetch('https://social-poster-backend.vercel.app/api/meta-oauth-url');
       const data = await response.json();
       
       if (!response.ok) {
         throw new Error(data.error || 'Failed to get OAuth URL');
       }
 
+      // Add session ID to the OAuth URL
+      const oauthUrlWithSession = data.oauthUrl + '&state=' + sessionId;
+
       // Open OAuth URL in external browser
-      await window.electronAPI.openExternal(data.oauthUrl);
+      await window.electronAPI.openExternal(oauthUrlWithSession);
       
       // Show message to user
       setSaveStatus({
         show: true,
-        message: 'OAuth window opened in browser. Please complete authentication and return here.',
+        message: 'OAuth window opened in browser. Please complete authentication...',
         severity: 'info',
       });
+
+      // Poll the backend for completed authentication
+      const pollForAuth = async () => {
+        try {
+          const pollResponse = await fetch(`https://social-poster-backend.vercel.app/api/store-credentials?sessionId=${sessionId}`);
+          
+          if (pollResponse.ok) {
+            const pollData = await pollResponse.json();
+            if (pollData.success && pollData.credentials) {
+              // Authentication completed! Store credentials
+              const mergedCredentials = {
+                ...credentials,
+                ...pollData.credentials
+              };
+              
+              await window.electronAPI.storeSet('credentials', mergedCredentials);
+              setCredentials(mergedCredentials);
+              
+              setSaveStatus({
+                show: true,
+                message: `Successfully logged in as ${pollData.credentials.facebook.userInfo.name}!`,
+                severity: 'success',
+              });
+              setMetaAuthLoading(false);
+              return true;
+            }
+          }
+          return false;
+        } catch (error) {
+          console.log('Polling for auth...', error.message);
+          return false;
+        }
+      };
+
+      // Poll every 3 seconds for up to 5 minutes
+      let attempts = 0;
+      const maxAttempts = 100; // 5 minutes
+      
+      const polling = setInterval(async () => {
+        attempts++;
+        const authCompleted = await pollForAuth();
+        
+        if (authCompleted || attempts >= maxAttempts) {
+          clearInterval(polling);
+          if (!authCompleted && attempts >= maxAttempts) {
+            setSaveStatus({
+              show: true,
+              message: 'Authentication timeout. Please try again if login was not completed.',
+              severity: 'warning',
+            });
+            setMetaAuthLoading(false);
+          }
+        }
+      }, 3000);
 
     } catch (error) {
       console.error('Error initiating Meta OAuth:', error);
@@ -157,7 +217,6 @@ const ConfigForm = () => {
         message: 'Error initiating OAuth: ' + error.message,
         severity: 'error',
       });
-    } finally {
       setMetaAuthLoading(false);
     }
   };
