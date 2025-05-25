@@ -79,3 +79,6 @@ release/
 .env
 .env.*
 !.env.example
+
+# Backend repository (separate repo)
+social-poster-backend/
