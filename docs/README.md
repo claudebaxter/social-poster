@@ -4,16 +4,16 @@ This directory contains the legal documents for Social Poster, hosted publicly v
 
 ## Documents
 
-- **Privacy Policy** ([HTML](privacy-policy.html) | [Markdown](privacy-policy.md)): How we handle user data and protect privacy
-- **Terms of Service** ([HTML](terms-of-service.html) | [Markdown](terms-of-service.md)): Terms and conditions for using Social Poster
+- **Privacy Policy** ([Live Page](https://claudebaxter.github.io/social-poster/privacy-policy.html) | [Source](privacy-policy.md)): How we handle user data and protect privacy
+- **Terms of Service** ([Live Page](https://claudebaxter.github.io/social-poster/terms-of-service.html) | [Source](terms-of-service.md)): Terms and conditions for using Social Poster
 
-## Public URLs
+## Live GitHub Pages URLs
 
-Once GitHub Pages is enabled, these documents will be accessible at:
+These documents are publicly accessible at:
 
-- Privacy Policy: `https://claudebaxter.github.io/social-poster/privacy-policy.html`
-- Terms of Service: `https://claudebaxter.github.io/social-poster/terms-of-service.html`
-- Main page: `https://claudebaxter.github.io/social-poster/`
+- **Privacy Policy**: https://claudebaxter.github.io/social-poster/privacy-policy.html
+- **Terms of Service**: https://claudebaxter.github.io/social-poster/terms-of-service.html
+- **Legal Documents Hub**: https://claudebaxter.github.io/social-poster/
 
 ## GitHub Pages Setup
 
@@ -27,7 +27,7 @@ The documents will be live within a few minutes at the URLs above.
 
 ## Meta App Review
 
-For Meta app review, use these URLs:
+For Meta app review, use these live URLs:
 
 - **Privacy Policy URL**: `https://claudebaxter.github.io/social-poster/privacy-policy.html`
 - **Terms of Service URL**: `https://claudebaxter.github.io/social-poster/terms-of-service.html`
@@ -36,7 +36,7 @@ For Meta app review, use these URLs:
 
 When updating these documents:
 
-1. Edit the HTML and/or Markdown files
+1. Edit the HTML and/or Markdown files in this directory
 2. Update the "Last updated" date
 3. Commit and push changes
 4. GitHub Pages will automatically update within minutes

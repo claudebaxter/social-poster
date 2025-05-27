@@ -266,8 +266,14 @@ ipcMain.handle('post:social', async (event, { text, platforms, image }) => {
               console.log('⚠️ Image too large for Bluesky, attempting compression...');
               
               try {
-                // Use sharp library for image compression if available
-                const sharp = require('sharp');
+                // Try to use sharp library for image compression if available
+                let sharp;
+                try {
+                  sharp = require('sharp');
+                } catch (sharpError) {
+                  console.log('Sharp not available in built version, using fallback approach');
+                  throw new Error(`Image is too large for Bluesky (${(imageBuffer.length / 1024).toFixed(2)}KB > ${(blueskySizeLimit / 1024).toFixed(0)}KB limit). Please use a smaller image or resize it manually before uploading.`);
+                }
                 
                 let quality = 85; // Start with 85% quality
                 let compressedBuffer;
@@ -292,9 +298,9 @@ ipcMain.handle('post:social', async (event, { text, platforms, image }) => {
                   throw new Error(`Image is too large for Bluesky. Maximum size is ${(blueskySizeLimit / 1024).toFixed(0)}KB. Current size: ${(compressedBuffer.length / 1024).toFixed(2)}KB. Please use a smaller image.`);
                 }
               } catch (compressionError) {
-                if (compressionError.code === 'MODULE_NOT_FOUND') {
+                if (compressionError.code === 'MODULE_NOT_FOUND' || compressionError.message.includes('Sharp not available')) {
                   // Sharp not available, suggest manual resize
-                  throw new Error(`Image is too large for Bluesky (${(imageBuffer.length / 1024).toFixed(2)}KB > ${(blueskySizeLimit / 1024).toFixed(0)}KB limit). Please resize your image and try again.`);
+                  throw new Error(`Image is too large for Bluesky (${(imageBuffer.length / 1024).toFixed(2)}KB > ${(blueskySizeLimit / 1024).toFixed(0)}KB limit). Image compression is not available in this build. Please resize your image manually and try again.`);
                 } else {
                   throw compressionError;
                 }

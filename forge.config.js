@@ -4,6 +4,9 @@ module.exports = {
     name: 'Social Poster',
     executableName: 'social-poster',
     out: 'release-builds',
+    extraResource: [
+      './node_modules/sharp'
+    ],
   },
   rebuildConfig: {},
   makers: [
@@ -20,6 +23,10 @@ module.exports = {
     },
   ],
   plugins: [
+    {
+      name: '@electron-forge/plugin-auto-unpack-natives',
+      config: {},
+    },
     {
       name: '@electron-forge/plugin-vite',
       config: {

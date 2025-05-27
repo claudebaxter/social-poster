@@ -1,95 +1,150 @@
-# Social Poster
+<div align="center">
+  <img src="icon.png" alt="Social Poster Logo" width="128" height="128">
+  
+  # Social Poster
+  
+  **A powerful desktop application for posting to multiple social media platforms simultaneously**
+  
+  [![GitHub Release](https://img.shields.io/github/v/release/claudebaxter/social-poster)](https://github.com/claudebaxter/social-poster/releases)
+  [![GitHub Downloads](https://img.shields.io/github/downloads/claudebaxter/social-poster/total)](https://github.com/claudebaxter/social-poster/releases)
+  [![License](https://img.shields.io/badge/license-Proprietary-blue)](LICENSE)
+  
+  *Write once, post everywhere!*
+</div>
 
-A desktop application for posting to multiple social media platforms simultaneously. Write once, post everywhere!
+## ✨ Features
 
-## Features
+- 🚀 **Multi-Platform Posting**: Post to multiple social networks with a single click
+- 🔐 **Secure & Private**: All credentials stored locally on your device
+- 🎯 **Supported Platforms**:
+  - 📘 Facebook
+  - 📸 Instagram
+  - 🦋 Bluesky
+  - 🐦 X (Twitter)
+- 💻 **Cross-Platform**: Native desktop application for Windows
+- 🛡️ **No Data Collection**: Zero telemetry, completely private
+- ⚡ **Lightning Fast**: Built with Electron for optimal performance
 
-- Post to multiple platforms with a single click
-- Supported platforms:
-  - Facebook
-  - Instagram
-  - Bluesky
-  - X (Twitter)
-- Secure local credential storage
-- Modern, easy-to-use interface
+## 📥 Installation
 
-## Installation
+### Windows Users (Recommended)
 
-### Windows Users
+1. **Download** the latest installer from [**Releases**](https://github.com/claudebaxter/social-poster/releases/latest)
+2. **Run** the `Social-Poster-Setup.exe` installer
+3. **Launch** "Social Poster" from your Start menu or desktop shortcut
 
-1. Download the latest `Social-Poster-Setup.exe` from the [Releases](https://github.com/yourusername/social-poster/releases) page
-2. Run the installer
-3. Launch "Social Poster" from your Start menu or desktop shortcut
+### Portable Version
 
-### Alternative Installation (Portable Version)
+1. **Download** the `social-poster-win32-x64.zip` from [**Releases**](https://github.com/claudebaxter/social-poster/releases/latest)
+2. **Extract** the ZIP file to any location
+3. **Run** `social-poster.exe` from the extracted folder
 
-1. Download the `social-poster-win32-x64.zip` from the [Releases](https://github.com/yourusername/social-poster/releases) page
-2. Extract the ZIP file to any location on your computer
-3. Run `social-poster.exe` from the extracted folder
+> **Note**: You can also find pre-built executables in the [`dist-electron`](https://github.com/claudebaxter/social-poster/tree/main/dist-electron) directory.
 
-## First-Time Setup
+## 🚀 Quick Start
 
-1. Launch Social Poster
-2. Click the "Config" option in the right menu
-3. Configure your social media credentials:
-   - For Facebook/Instagram: Enter your App ID and App Secret
-   - For Bluesky: Enter your handle and app password
-4. Click "Save Credentials"
-5. Switch to "Post" to start sharing content
+### Initial Setup
 
-## Usage
+1. **Launch** Social Poster
+2. **Navigate** to the "Config" tab in the right menu
+3. **Configure** your social media credentials:
+   - **Facebook/Instagram**: Enter your Meta App ID and App Secret
+   - **Bluesky**: Enter your handle and app password
+   - **X (Twitter)**: Configure API credentials
+4. **Save** your credentials securely
+5. **Switch** to the "Post" tab to start sharing content
 
-1. Write your post in the text area
-2. Select which platforms to post to using the checkboxes
-3. Click "Post" to share your content
-4. Check the notification for posting status
+### Posting Content
 
-## System Requirements
+1. **Write** your message in the text area
+2. **Select** platforms using the checkboxes
+3. **Add** images (optional)
+4. **Click** "Post" to share across all selected platforms
+5. **Monitor** the status notifications for confirmation
 
-- Windows 10 or later
-- 4GB RAM minimum
-- 500MB free disk space
+## 🔧 System Requirements
 
-## Development
+- **OS**: Windows 10 or later (64-bit)
+- **RAM**: 4GB minimum, 8GB recommended
+- **Storage**: 500MB free disk space
+- **Network**: Internet connection required for posting
 
-To build from source:
+## 🔒 Privacy & Security
 
-1. Clone the repository
+- ✅ **Local Storage**: All credentials stored locally using encrypted electron-store
+- ✅ **No Cloud Sync**: Your data never leaves your device
+- ✅ **Direct API Calls**: Communicates only with official platform APIs
+- ✅ **Zero Telemetry**: No usage tracking or analytics
+- ✅ **Open Review**: Source code available for security auditing
+
+**Privacy Policy**: [https://claudebaxter.github.io/social-poster/privacy-policy.html](https://claudebaxter.github.io/social-poster/privacy-policy.html)
+
+## 🛠️ Development
+
+### Building from Source
+
 ```bash
-git clone https://github.com/yourusername/social-poster.git
+# Clone the repository
+git clone https://github.com/claudebaxter/social-poster.git
 cd social-poster
-```
 
-2. Install dependencies
-```bash
+# Install dependencies
 npm install
-```
 
-3. Run in development mode
-```bash
+# Run in development mode
 npm run dev
-```
 
-4. Build distributable
-```bash
+# Build for production
+npm run build
+
+# Create distributable
 npm run make
 ```
 
-## Privacy & Security
+### Tech Stack
 
-- All credentials are stored locally on your device
-- No data is sent to external servers except the official platform APIs
-- Credentials are stored securely using electron-store
+- **Framework**: Electron
+- **Frontend**: HTML, CSS, JavaScript
+- **Build Tool**: Vite
+- **Packaging**: Electron Forge
 
-## License Agreement
+## 📄 Legal
 
-This software is the proprietary property of [Your Name or Company].
+### Terms of Service
 
-By purchasing and downloading the application, you are granted a non-transferable, non-exclusive license to install and use the software for personal or commercial use. 
+View our complete Terms of Service: [https://claudebaxter.github.io/social-poster/terms-of-service.html](https://claudebaxter.github.io/social-poster/terms-of-service.html)
 
-You may not:
-- Redistribute or resell the application
-- Reverse engineer, modify, or decompile the source code
-- Use the application in any illegal or unauthorized way
+### License Agreement
 
-All rights reserved. For licensing inquiries or commercial use, contact: [you@example.com]
+This software is proprietary and licensed for use under specific terms:
+
+- ✅ **Personal & Commercial Use**: Licensed for individual and business use
+- ✅ **Multiple Installations**: Install on devices you own/control
+- ❌ **Redistribution**: May not redistribute or resell the application
+- ❌ **Reverse Engineering**: Source code modification prohibited
+- ❌ **Unauthorized Use**: Must comply with platform terms of service
+
+For licensing inquiries: **e.baxter@dark-coin.io**
+
+## 🤝 Support
+
+- 🐛 **Bug Reports**: [GitHub Issues](https://github.com/claudebaxter/social-poster/issues)
+- 💬 **Discussions**: [GitHub Discussions](https://github.com/claudebaxter/social-poster/discussions)
+- 📧 **Contact**: e.baxter@dark-coin.io
+- 📚 **Documentation**: [Setup Guides](./docs/)
+
+## 🏗️ Project Status
+
+- **Current Version**: Check [Latest Release](https://github.com/claudebaxter/social-poster/releases/latest)
+- **Platform Support**: Windows (macOS and Linux planned)
+- **Active Development**: Regularly updated with new features and bug fixes
+
+---
+
+<div align="center">
+  
+  **Made with ❤️ by [Claude Baxter](https://github.com/claudebaxter)**
+  
+  [Website](https://claudebaxter.github.io/social-poster/) • [Privacy](https://claudebaxter.github.io/social-poster/privacy-policy.html) • [Terms](https://claudebaxter.github.io/social-poster/terms-of-service.html)
+  
+</div>
